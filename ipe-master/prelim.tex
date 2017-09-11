@@ -1,0 +1,50 @@
+
+\section{Preliminaries}
+\textbf{Notation.} Let $\secparam$ be the security parameter, and let $\ppt$ denote probabilistic polynomial time. We use bold uppercase letters to denote matrices ${\bf M}$, and bold lowercase letters to denote vectors $\vec{v}$. We write $\widetilde{\mat M}$ to denote the Gram-Schmidt orthogonalization of $\mat M.$ We write $[n]$ to denote the set $\{1,...,n\}$, and $|\vec{t}|$ to denote the number of bits in the string $\vec{t}$. We denote the $i$-th bit $\vec{s}$ by $\vec{s}[i]$. We say a function $\negl(\cdot): \N \rightarrow (0,1)$ is negligible, if for every constant $c \in \N$, $\negl(n) < n^{-c}$ for sufficiently large $n$.
+
+\subsection{Inner Product Encryption}
+We recall the syntax and security definition of \emph{inner product encryption} (IPE) ~\cite{EC:KatSahWat08,AC:AgrFreVai11}. IPE can be regarded as a generalization of predicate encryption. An IPE scheme $\Pi = (\setup, \keygen, \enc, \dec)$ can be described as follows:
+\begin{description}
+ \item $\setup(1^\secparam)$: On input the security parameter $\secparam$, the setup algorithm outputs public parameters $\pp$ and master secret key $\msk$.
+ \item $\keygen(\msk, \vec{v})$: On input the master secret key $\msk$ and a predicate vector $\vec{v}$, the key generation algorithm outputs a secret key $\sk_{\vec{v}}$ for vector $\vec{v}$.
+ \item $\enc(\pp, \vec{w}, \mu)$: On input the public parameter $\pp$ and an attribute/message pair $(\vec{w}, \mu)$, it outputs a ciphertext $\ct_{\vec{w}}$.
+ \item $\dec(\sk_{\vec{v}}, \ct_{\vec{w}})$: On input the secret key $\sk_{\vec{v}}$ and a ciphertext $\ct_{\vec{w}}$, it outputs the corresponding plaintext $\mu$ if $\langle \vec{v}, \vec{w} \rangle = 0$; otherwise, it outputs $\bot$.
+\end{description}
+
+\begin{definition}[Correctness]\label{defn:cor}
+We say the IPE scheme described above is correct, if for any $(\msk, \pp) \leftarrow \setup(1^\secparam)$, any message $\mu$, any predicate vector $\vec{v} \in \Z_q^d$, and attribute vector $\vec{w} \in \Z_q^d$ such that $\langle \vec{v}, \vec{w}\rangle = 0$, we have $\dec(\sk_{\vec{v}}, \ct_{\vec{w}}) = \mu$, where $\sk_{\vec{w}} \leftarrow \keygen(\msk, \vec{v})$ and $\ct_{\vec{v}} \leftarrow \enc(\pp, \vec{w}, \mu)$.
+\end{definition}
+
+\paragraph{Security.} For the weakly attribute-hiding property of IPE, we use the following experiment to describe it. Formally, for any $\ppt$ adversary $\A$, we consider the experiment $\Expt_{\A}^{\mathsf{IPE}}(1^\secparam)$:
+\begin{itemize}[leftmargin=*]
+ \item \textbf{Setup}: Adversary $\A$ sends two challenge attribute vectors $\vec{w}_{0}, \vec{w}_{1} \in \Z_q^d$ to challenger.  A challenger runs the $\setup(1^\secparam)$ algorithm, and sends back the master public key $\pp$.
+ \item \textbf{Query Phase I}: Proceeding adaptively, the adversary $\A$ queries a sequence of predicate vectors $(\vec{v}_1,..., \vec{v}_m)$ subject to the restriction that $\langle \vec{v}_i, \vec{w}_{0} \rangle \neq 0$ and $\langle \vec{v}_i, \vec{w}_{1} \rangle \neq 0$. On the $i$-th query, the challenger runs $\sk_{\vec{v}_i} \rightarrow \keygen(\msk, \vec{v}_i),$ and sends the result $\sk_{\vec{v}_i}$ to $\A$.
+ \item \textbf{Challenge}: Once adversary $\A$ decides that Query Phase I is over, he outputs two length-equal messages $(\mu^*_0, \mu^*_1)$ and sends them to challenger.  In response, the challenger selects a random bit $b^* \in \bool$, and sends the ciphertext $\ct^* \leftarrow \enc(\pp, \vec{w}_{b^*}, \mu_{b^*})$ to adversary $\A$.
+ \item \textbf{Query Phase II}: Adversary $\A$ continues to issue secret key queries $(\vec{v}_{m + 1},..., \vec{v}_{n})$ adaptively, subject to the restriction that $\langle \vec{v}_i, \vec{w}_{0} \rangle \neq 0$ and $\langle \vec{v}_i, \vec{w}_{1} \rangle \neq 0$. The challenger responds by sending back keys $\sk_{\vec{v}_i}$ as in Query Phase I.
+ \item \textbf{Guess}: Adversary $\A$ outputs a guess $b' \in \bool$.
+\end{itemize}
+We note that query phase I and II can happen polynomial times in terms of security parameter. The advantage of adversary $\A$ in attacking an IPE scheme $\Pi$ is defined as:
+$$\advantage_{\A}(1^\secparam) = \left|\Pr[b^* = b'] - \frac{1}{2}\right|,$$
+\noindent where the probability is over the randomness of the challenger and adversary.
+
+\begin{definition}[Weakly attribute-hiding]\label{defn:sec}
+We say an IPE scheme $\Pi$ is weakly attribute-hiding against chosen-plaintext attacks in selective attribute setting, if for all $\ppt$ adversaries $\A$ engaging in experiment $\Expt_{\A}^{\mathsf{IPE}}(1^\secparam)$, we have
+$$\advantage_{\A}(1^\secparam) \leq \negl(\secparam).$$
+\end{definition}
+
+\subsection{Gadget Matrix}
+We now recall the gadget matrix~\cite{EC:MicPei12,C:AlpPei14}, and the extended gadget matrix technique appeared in~\cite{EPRINT:ApoFanLiu16a}, that are important to our construction.
+\begin{definition}
+Let $m = n \cdot \lceil\log q \rceil$, and define the gadget matrix
+$$\mat{G}_{n, 2, m} = \vec{g} \otimes \mat{I}_n \in \Z_q^{n \times m}$$
+where vector $\vec{g} = (1, 2, 4,..., 2^{\lfloor \log q \rfloor}) \in \Z_q^{\lceil \log q \rceil}$, and $\otimes$ denotes tenser product. We will also refer to this gadget matrix as ``powers-of-two'' matrix. We define the inverse function $\mat{G}^{-1}_{n, 2, m}: \Z_q^{n \times m} \rightarrow \bool^{m \times m}$ which expands each entry $a \in \Z_q$ of the input matrix into a column of size $\lceil \log q \rceil$ consisting of the bits of binary representations. We have the property that for any matrix $\mat{A} \in Z_q^{n \times m}$, it holds that $\G_{n, 2, m} \cdot \G^{-1}_{n, 2, m}(\mat{A}) = \mat{A}$.
+\end{definition}
+As mentioned by~\cite{EC:MicPei12} and explicitly described in~\cite{EPRINT:ApoFanLiu16a}, the results for $\mat{G}_{n, 2, m}$ and its trapdoor can be extended to other integer powers or mixed-integer products. In this direction, we give
+a generalized notation for gadget matrices as follows:
+
+For any modulus $q\ge 2,$ for integer base $2 \le b \le q,$ let $\vec{g}_{b}^T := \left[1, b, b^2, ..., b^{k_b-1}\right]\in\Z_q^{1\times k_b}$ for $k_b = \lceil\log_b{q}\rceil.$ (Note that the typical base-2 $\vec g^T$ is $\vec g_2^T.$) For row dimension $n$ and $b$ as before, we let $\mat G_{n, b} = \mat g_{b}^T\otimes\mat I_{n}\in\Z_q^{n\times nk_b}.$ The public trapdoor basis $\mat{T}_{\mat{G}_{n, b}}$ is given analogously. Similar to the above padding argument, $\mat G_{n, b}\in\Z_q^{n\times nk_b}$ can be padded into a matrix $\mat G_{n, b, m}\in\Z_{q}^{n\times m}$ for $m\geq  nk_b$ without increasing the norm of $\widetilde{\mat T_{\mat G_{n, b, m}}}$ from that of $\widetilde{\mat T_{\mat G_{n, b}}}.$
+
+Following~\cite{PKC:Xagawa13}~and~\cite{C:AlpPei14}, we now introduce a related function -- the Batch Change-of-Base function $\mat{G}_{n', b', m'}^{-1}(\cdot)$ -- as follows:
+
+For any modulus $q\ge 2,$ and for any integer base $2 \le b' \le q,$ let integer $k_{b'} := \lceil\log_{b'}(q)\rceil.$
+For any integers $n'\ge 2$ and $m'\ge n'k_{b'}$ the function $\mat{G}_{n', b', m'}^{-1}(\cdot)$ takes as input a matrix from $\Z_q^{n'\times m'},$ first computes a matrix in $\{0, 1, ..., b'-1\}^{n'\log_{b'}(q)\times m'}$ using the typical $\mat G^{-1}$ procedure (except with base-$b'$ output), then pads with rows of zeroes as needed to form a matrix in $\{0, 1, ..., b'-1\}^{m'\times m'}.$ For example, the typical base-2 $\mat G^{-1} = \mat G^{-1}_{n, 2, m}$ takes $\Z_q^{n\times m}$ to $\bool^{m\times m}$ as expected.
